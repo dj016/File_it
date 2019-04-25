@@ -2,7 +2,8 @@ import socket
 import threading  
 import sys 
 import os    
-import time         
+import time    
+import pickle     
   
 def check_active(ip_list):
 
@@ -22,7 +23,7 @@ def main():
 	except socket.error as err: 
 	    print ("socket creation failed with error",err) 
 
-	port = 12375                
+	port = 50007              
 
 	try:
 		s.bind(('', port))         
@@ -33,21 +34,26 @@ def main():
 	s.listen()      
 	print ("socket is listening")            
 
-	hub = ()
-	t1 = threading.Thread(target=check_active, args=(hub,)) 
-	t1.daemon = True
-	t1.start() 
+	hub = []
+	# t1 = threading.Thread(target=check_active, args=(hub,)) 
+	# t1.daemon = True
+	# t1.start() 
 
 	while True: 
 
 		# Establish connection with client. 
-		c, addr = s.accept()      
-		print ('Got connection from', addr) 
-		c.send('Thank you for connecting')
+		c, addr = s.accept()
+		#print(c.recv(1024).decode())      
+		print ('Got connection from', addr)
+		#str = 'Thank you for connecting\nHere are the currently active clients\n' 
+		#c.send(str.encode())
+		print(type(addr))
+		hub.append(addr)
+		ip_string = pickle.dumps(hub)
+		c.send(ip_string)
 
-		c.send('Here are the currently active clients')
-		c.send(hub)
-		hub.append(addr) 
+		print("Client list sent! Connection closing....")
+		time.sleep(2) 
 		c.close() 
 
 	t1.join() 
