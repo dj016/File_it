@@ -9,7 +9,7 @@ def check_active(ip_list):
 
 	while True:
 		for server_ip in ip_list:
-			rep = os.system('ping ' + server_ip)
+			rep = os.system('ping -c 1 ' + server_ip)
 
 			if rep != 0:
 				print (server_ip," is down")
@@ -35,9 +35,9 @@ def main():
 	print ("socket is listening")            
 
 	hub = []
-	# t1 = threading.Thread(target=check_active, args=(hub,)) 
-	# t1.daemon = True
-	# t1.start() 
+	t1 = threading.Thread(target=check_active, args=(hub,)) 
+	t1.daemon = True
+	t1.start() 
 
 	while True: 
 
@@ -56,7 +56,7 @@ def main():
 		time.sleep(2) 
 		c.close() 
 
-	t1.join() 
+	#t1.join() 
 	s.close() 
 
 if __name__ == "__main__":
