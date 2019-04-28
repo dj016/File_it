@@ -15,12 +15,13 @@ def stichk(fileName):
         line = mf.readline()
         dirName= metaPath[:-8]
         fileName= dirName+line
-        print(dirName)
+        #print(dirName)
         with open(fileName,"wb+") as f:
             line=mf.readline()
             while line:
                 hashPath= dirName+line
                 hashPath= hashPath.rstrip("\n")
+                print(hashPath)
                 with open(hashPath,"rb") as hf:
                     contents=hf.read()
                     f.write(contents)
