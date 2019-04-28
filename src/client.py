@@ -5,6 +5,7 @@ import queue
 from os.path import expanduser
 import pickle
 import os
+import time
 
 #to download whatever client wants
 def download(data_arr):
@@ -19,21 +20,26 @@ def download(data_arr):
 		if s != -1:
 			have_file.append(s)
 
-	myq = recv_meta(have_file[0],filename)
+	if len(have_file) > 0:
+		print(len(have_file)," Connections have this file")
+		myq = recv_meta(have_file[0],filename)
 
-	download_list = []
+		download_list = []
 
-	for c in have_file:
-		#make multiple connection and send segments hash 
-		down_conn = threading.Thread(target = download_util, args = (c,myq,filename,))
-		down_conn.start()
-		download_list.append(down_conn)
+		for c in have_file:
+			#make multiple connection and send segments hash 
+			down_conn = threading.Thread(target = download_util, args = (c,myq,filename,))
+			down_conn.start()
+			download_list.append(down_conn)
 
-	for x in download_list:
-		x.join()
+		for x in download_list:
+			x.join()
 
-	import stitch
-	stitch.stichk(filename)
+		import stitch
+		stitch.stichk(filename)
+		print("Download Successful")
+	else:
+		print('No one has this file')
 
 def download_query_util(addr,filename):
 	HOST = addr[0]   	  # The remote host
@@ -48,6 +54,7 @@ def download_query_util(addr,filename):
 
 	data = s.recv(1024).decode()
 	if data == 'y':
+		print("File Found with ",addr)
 		return s
 	else:
 		s.send('close'.encode())
@@ -67,10 +74,10 @@ def recv_meta(c,f_name):
 	
 	with open(meta_file,'wb+') as p:
 		while 1:
-			m = c.recv(4095)
+			m = c.recv(919)
 			p.write(m)
 		# 	data = data + m.decode()
-			if len(m) < 4095:
+			if len(m) < 919:
 		 		break
 		# p.write(data.encode())
 	p.close()
@@ -94,7 +101,7 @@ def download_util(c,q,f_name):
 	if not os.path.isdir(filename):
 		os.mkdir(filename)
 
-	while q.empty() == False:	
+	while q.qsize() != 1:	
 		seg_num = q.get()
 		seg_num = seg_num.rstrip(' ')
 		seg_num = seg_num.rstrip('\n')
@@ -102,16 +109,23 @@ def download_util(c,q,f_name):
 		hash_file = filename + "/" + seg_num
 		with open(hash_file,'wb+') as p:
 			st = 'Send Chunk ' + seg_num
+			print(st)
 			c.send(st.encode())
-			while 1:
-				m = c.recv(4095)
+
+			chunk_len = int(c.recv(4096).decode())
+
+			recv_len = 0
+
+			while recv_len < chunk_len :
+				m = c.recv(919)
 				#data = data + m.decode()
+				recv_len = recv_len + len(m)
 				p.write(m)
-				if len(m) < 4095:
-					break;
 			#p.write(data.encode())
 			print("Downloaded", hash_file)
 			p.close()
+			print("qsize",q.qsize())
+			#time.sleep(2)
 
 	c.send('close'.encode())
 	c.close()
@@ -149,11 +163,11 @@ def share():
 #will share the required segment on socket c
 def share_util(c):
 	#answer the query, if do not have close socket and return
-	query = c.recv(4095).decode()
-	print('Query message received : ', query)
-	while query.find("close")==-1:
+	query = c.recv(919).decode()
+	
+	while query.find("close") == -1:
+		print('Query message received : ', query)
 		if query.find('Is present') != -1:
-			print("File Found!")
 			pos = query.find('Is present') + len('Is present ')
 			filename = query[pos:]
 			if os.path.isdir(expanduser("~")+"/dc++_files"):
@@ -183,18 +197,27 @@ def share_util(c):
 			pos = query.find('Send Chunk ') + len('Send Chunk ')
 			hashName= query[pos:]
 			hashName= hashName.rstrip('\n')
-			try:
-				with open(expanduser("~")+"/dc++_files/files/"+filename+"/"+hashName,"rb") as hf:
+			hashName= hashName.rstrip(' ')
+			hashName= hashName.rstrip(' \n')
+			with open(expanduser("~")+"/dc++_files/files/"+filename+"/"+hashName,"rb") as hf:
 					contents=hf.read()
+					c.send(str(len(contents)).encode())
+					time.sleep(0.01)
 					c.sendall(contents)
 					hf.close()
-			except:
-				print("Problem in opening the hashfile")
-				print (expanduser("~")+"/dc++_files/files/"+filename+"/"+hashName)
-		query=c.recv(4095).decode()
+			#try:
+				# with open(expanduser("~")+"/dc++_files/files/"+filename+"/"+hashName,"rb") as hf:
+				# 	contents=hf.read()
+				# 	c.sendall(contents)
+				# 	hf.close()
+			# except:
+			# 	print("Problem in opening the hashfile")
+			# 	print (expanduser("~")+"/dc++_files/files/"+filename+"/"+hashName)
+		query=c.recv(919).decode() 
 
-	#receive segment hash and send it 
-
+	print("File Shared sucessfully...closing connection")
+	c.close()
+	return
 
 
 def main(): 
@@ -202,7 +225,7 @@ def main():
 	t1.daemon = True
 	t1.start() 
 
-	HOST = '192.168.103.247'
+	HOST = sys.argv[1]
 	PORT = 50002
 	try: 
 		s = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
@@ -215,19 +238,41 @@ def main():
 	except socket.error as err:
 		print ("connection failed with error",err) 
 
-	data = s.recv(4095)
+	data = s.recv(919)
 	data_arr = pickle.loads(data)
-	print ('Received',len(data_arr),'Connections..\n')
+	data_ip = data_arr[:][0]
+	data_ip = list(set(data_ip))
+	print ('Received',len(data_ip),'Connections..\n')
 	s.close()
 
 	while 1 :
-		ret = input("What are you here For ?\n1.Downloading\n2.Uploading\n\nResponce : ")       
+		ret = input("What are you here For ?\n1.Downloading\n2.Uploading\n3.Update Active user list\nResponce : ")       
 	
 		if ret == '2':
 			import upload
-		else:
+		elif ret == '1':
 			download(data_arr)
-			print("Main : Download Successful")
+		else:
+			HOST = sys.argv[1]
+			PORT = 50002
+			try: 
+				s = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
+				print ("Socket successfully created")
+			except socket.error as err:
+				print ("socket creation failed with error",err) 
+			try:
+				s.connect((HOST, PORT))
+				print("Connected to ",HOST,PORT)
+			except socket.error as err:
+				print ("connection failed with error",err) 
+
+			data = s.recv(919)
+			data_arr = pickle.loads(data)
+			data_ip = data_arr[:][0]
+			data_ip = list(set(data_ip))
+			print ('Received',len(data_ip),'Connections..\n')
+			s.close()
+
 	#write exit condtion 
 	t1.join()
 

@@ -15,6 +15,9 @@ def stichk(fileName):
         line = mf.readline()
         dirName= metaPath[:-8]
         fileName= dirName+line
+        fileName=fileName.rstrip(' ')
+        fileName=fileName.rstrip(' \n')
+        fileName=fileName.rstrip('\n')
         #print(dirName)
         with open(fileName,"wb+") as f:
             line=mf.readline()
@@ -35,10 +38,12 @@ def stichk(fileName):
             os.mkdir(home+'/dc++_downloads')
         pos=fileName.rfind('/')
         newPath=home+"/dc++_downloads"+fileName[pos:]
-        shutil.move(fileName,newPath)
-        if os.path.isdir(fileName[:pos]):
-            shutil.rmtree(fileName[:pos])
-
-
-
-            
+        dest=expanduser("~")+"/dc++_downloads/temp"
+        os.rename(newPath,dest)
+        pos2=fileName.rfind('/')
+        dest= dest+fileName[pos2:]
+        #print(dest)
+        #print(newPath)
+        shutil.move(dest,newPath)
+        if os.path.isdir(expanduser("~")+"/dc++_downloads/temp"):
+            shutil.rmtree(expanduser("~")+"/dc++_downloads/temp")

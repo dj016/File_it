@@ -5,15 +5,16 @@ import os
 import time    
 import pickle     
   
-def check_active(ip_list):
+def check_active(addr_list,ip_list):
 
 	while True:
-		for server_ip in ip_list:
-			rep = os.system('ping -c 1 ' + server_ip)
+		for server_ip in addr_list:
+			rep = os.system('ping -c 1 ' + server_ip[0])
 
 			if rep != 0:
 				print (server_ip," is down")
-				ip_list.remove(server_ip)
+				addr_list.remove(server_ip)
+				ip_list.remove(server_ip[0])
 		time.sleep(60)	
 
 def main():
@@ -23,7 +24,7 @@ def main():
 	except socket.error as err: 
 	    print ("socket creation failed with error",err) 
 
-	port = 50007              
+	port = 50002              
 
 	try:
 		s.bind(('', port))         
@@ -35,7 +36,8 @@ def main():
 	print ("socket is listening")            
 
 	hub = []
-	t1 = threading.Thread(target=check_active, args=(hub,)) 
+	ip_hub = []
+	t1 = threading.Thread(target=check_active, args=(hub,ip_hub,)) 
 	t1.daemon = True
 	t1.start() 
 
@@ -47,8 +49,11 @@ def main():
 		print ('Got connection from', addr)
 		#str = 'Thank you for connecting\nHere are the currently active clients\n' 
 		#c.send(str.encode())
-		print(type(addr))
-		hub.append(addr)
+		#print(type(addr))
+		if addr[0] not in ip_hub:
+			print("new user!")
+			hub.append(addr)
+			ip_hub.append(addr[0])
 		ip_string = pickle.dumps(hub)
 		c.send(ip_string)
 
