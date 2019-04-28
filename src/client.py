@@ -3,6 +3,7 @@ import sys
 import threading
 import queue 
 from os.path import expanduser
+import pickle
 
 #to download whatever client wants
 def download(data_arr):
@@ -33,10 +34,11 @@ def download(data_arr):
 	import stitch
 	stich.stichk(filename)
 
-def download_query_util(addr):
+def download_query_util(addr,filename):
 	HOST = addr[0]   	  # The remote host
-	PORT = 50008              # The same port as used by everyone to share
+	PORT = 50009              # The same port as used by everyone to share
 	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	print("Trying to connect ",HOST,PORT)
 	s.connect((HOST, PORT))
 	
 	#query
@@ -50,8 +52,8 @@ def download_query_util(addr):
 		s.close()
 		return -1
 
-def recv_meta(c,filename):
-	c.send('Send Meta File',filename)
+def recv_meta(c,f_name):
+	c.send('Send Meta File',f_name)
 	filename = expanduser("~")+"/dc++_downloads" + f_name 
 	if not os.path.isdir(filename):
 		os.mkdir(filename)
@@ -100,7 +102,7 @@ def download_util(c,q,f_name):
 
 #will listen for connections to share to them
 def share():
-	port = 50005
+	port = 50009
 	try: 
 		s = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
 		print ("Sharing Socket successfully created")
@@ -174,28 +176,34 @@ def share_util(c):
 
 def main(): 
 	t1 = threading.Thread(target=share) 
-	#t1.daemon = True
+	t1.daemon = True
 	t1.start() 
 
-	ret = input("What are you here For ?\n1.Downloading\n2.Uploading\n\nResponce : ")       
-	
-	if ret == '2':
-		import upload
-	else:
-		HOST = 'localhost'   	  # The remote host
-		PORT = 50007              # The same port as used by the server
-		s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	HOST = '192.168.103.247'
+	PORT = 50002
+	try: 
+		s = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
+		print ("Socket successfully created")
+	except socket.error as err:
+		print ("socket creation failed with error",err) 
+	try:
 		s.connect((HOST, PORT))
-		# t = 'Hello, world'
-		# s.send(t.encode())
+		print("Connected to ",HOST,PORT)
+	except socket.error as err:
+		print ("connection failed with error",err) 
 
-		# data = s.recv(1024).decode()
-		# print (data)
-		data = s.recv(4096)
-		data_arr = pickle.loads(data)
-		print ('Received',len(data_arr),'Connections..\n')
-		s.close()
-		download(data_arr)
+	data = s.recv(4096)
+	data_arr = pickle.loads(data)
+	print ('Received',len(data_arr),'Connections..\n')
+	s.close()
+
+	while 1 :
+		ret = input("What are you here For ?\n1.Downloading\n2.Uploading\n\nResponce : ")       
+	
+		if ret == '2':
+			import upload
+		else:
+			download(data_arr)
 	#write exit condtion 
 	t1.join()
 

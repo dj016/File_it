@@ -2,8 +2,8 @@ import socket, pickle
 
 import socket
 
-HOST = 'localhost'    # The remote host
-PORT = 50007              # The same port as used by the server
+HOST = '192.168.103.247'    # The remote host
+PORT = 50002              # The same port as used by the server
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.connect((HOST, PORT))
 # t = 'Hello, world'
