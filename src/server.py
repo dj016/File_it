@@ -15,7 +15,8 @@ def check_active(addr_list,ip_list):
 				print (server_ip," is down")
 				addr_list.remove(server_ip)
 				ip_list.remove(server_ip[0])
-		time.sleep(60)	
+		print('Active connections',addr_list)
+		time.sleep(20)	
 
 def main():
 	try: 

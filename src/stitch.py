@@ -24,7 +24,7 @@ def stichk(fileName):
             while line:
                 hashPath= dirName+line
                 hashPath= hashPath.rstrip("\n")
-                print(hashPath)
+                #print(hashPath)
                 with open(hashPath,"rb") as hf:
                     contents=hf.read()
                     f.write(contents)
